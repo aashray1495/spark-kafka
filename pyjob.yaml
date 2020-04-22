@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pyspark-kafka
+spec:
+  template:
+    spec:
+      containers:
+        - name: pyspark-kafka
+          image: nubee/spark_kubernetes_pyspark:v2
+          imagePullPolicy: Always
+          command: [
+            "/bin/sh",
+            "-c",
+            "/opt/spark/bin/spark-submit \
+                        --master k8s://abc.gr7.us-east-1.eks.amazonaws.com \
+                        --deploy-mode cluster \
+                        --name pyspark-kafka \
+                        --executor-memory=1G \
+                        --driver-memory=1G \
+                        --conf spark.executor.instances=1 \
+                        --conf spark.executor.cores=1 \
+                        --conf spark.kubernetes.container.image=nubee/spark_kubernetes_pyspark:v2 \
+                        --conf spark.kubernetes.container.image.pullPolicy=Always \
+                        --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
+                        --conf spark.kubernetes.driver.pod.name=pyspark-kafka \
+                        --conf spark.kubernetes.driver.volumes.persistentVolumeClaim.checkpointpvc.mount.path=/opt/spark/checkpoint \
+                        --conf spark.kubernetes.executor.volumes.persistentVolumeClaim.checkpointpvc.mount.path=/opt/spark/checkpoint \
+                        --conf spark.kubernetes.driver.volumes.persistentVolumeClaim.checkpointpvc.options.claimName=checkpoint \
+                        --conf spark.kubernetes.executor.volumes.persistentVolumeClaim.checkpointpvc.options.claimName=checkpoint \
+                        --conf spark.checkpoint.location=file:///opt/spark/checkpoint \
+                        --conf spark.jars=/opt/spark/jars/spark-streaming-kafka-0-10_2.11-2.4.5.jar,/opt/spark/jars/spark-sql-kafka-0-10_2.11-2.4.5.jar \
+                        local:///opt/spark/python/kafka-read.py"
+          ]
+      serviceAccountName: spark
+      restartPolicy: Never
+  backoffLimit: 4
